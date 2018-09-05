@@ -2,10 +2,10 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'dab',
-    execute(message, args, client, Stats) {
+    execute(message, args, client, Users) {
         message.channel.fetchMessages({limit: isNaN(args[0]) ? 2 : parseInt(args[0]) + 1})
-          .then(msg => msg.map(m => {m.react(message.guild.emojis.find('name', 'dab'));
-          m.react(message.guild.emojis.find('name', 'dabb'));}));
+          .then(msg => msg.map(m => {m.react(message.guild.emojis.find(e => e.name == 'dab'));
+          m.react(message.guild.emojis.find(e => e.name == 'dabb'));}));
         message.delete();
     }
 }

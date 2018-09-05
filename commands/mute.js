@@ -4,12 +4,12 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'mute',
-    execute(message, args, client, Stats) {
+    execute(message, args, client, Users) {
         if(!message.member.permissions.has('MANAGE_ROLES')) return;
         if(message.channel.type == 'text') message.delete();
         const tagCount = message.mentions.users.array().length;
         const targetGuild = message.client.guilds.get(guildId);
-        const muteRole = targetGuild.roles.find('name', 'Muted');
+        const muteRole = targetGuild.roles.find(r => r.name == 'Muted');
         if(tagCount) {
             targetMember = message.client.guilds.get(guildId).members.find('id', message.mentions.users.first().id);
         }
@@ -17,26 +17,26 @@ module.exports = {
             const input = message.content.slice(message.content.indexOf(' ') + 1);
             if(input.charAt(input.length - 5) == '#') {
                 let targetId = targetGuild.members.filter(m => m.user.tag == input).map(u => u.id);
-                targetMember = targetGuild.members.find('id', targetId[0]);
+                targetMember = targetGuild.members.get(targetId[0]);
             }
             else {
                 try {
                     var targetUsername = targetGuild.members.filter(m => m.user.username == input).map(u => u.id);
-                    targetMember = targetGuild.members.find('id', targetUsername[0]);
+                    targetMember = targetGuild.members.get(targetUsername[0]);
                 }
                 catch(e) {
                     try {
-                        targetMember = targetGuild.members.find('displayName', input);
+                        targetMember = targetGuild.members.find(m => m.displayName == input);
                     }
                     catch(e) {
                         try {
                             var targetDisplayName = targetGuild.members.filter(m => m.displayName.includes(input)).map(u => u.id);
-                            targetMember = targetGuild.members.find('id', targetDisplayName[0]);
+                            targetMember = targetGuild.members.get(targetDisplayName[0]);
                         }
                         catch(e) {
                             try {
                                 var targetUsername = targetGuild.members.filter(m => m.user.username.includes(input)).map(u => u.id);
-                                targetMember = targetGuild.members.find('id', targetUsername[0]);
+                                targetMember = targetGuild.members.get(targetUsername[0]);
                             }
                             catch(e) {
                                 return message.channel.send('Invalid user')

@@ -21,7 +21,7 @@ const sequelize = new Sequelize('database', 'user', 'password', {
     storage: 'database.sqlite'
 });
 
-const Stats = sequelize.define('stats', {
+const Users = sequelize.define('users', {
     userId: {
       type: Sequelize.STRING,
       unique: true,
@@ -34,6 +34,10 @@ const Stats = sequelize.define('stats', {
     burgerCount: {
         type: Sequelize.INTEGER,
         defaultValue: 0
+    },
+    roleId: {
+        type: Sequelize.STRING,
+        unique: true
     }
 });
        
@@ -54,6 +58,24 @@ const to12Hr = (time => {
     return hours.toString().concat(`:${minutes}`);
 });
 
+client.on('raw', event => {
+    const {d : data} = event;
+    if(!data || !data.message_id) return;
+    if(data.message_id != '486687818983407628') return;
+    if(event.t == 'MESSAGE_REACTION_ADD') {
+        var targetGuild = client.guilds.get(guildId);
+        if(data.emoji.name == '🐱') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'Angel\'s Puss'));
+        else if(data.emoji.name == '🍿') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'Movie Squad'));
+        else if (data.emoji.name == '🥇') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'League'));
+    }
+    else if(event.t == 'MESSAGE_REACTION_REMOVE') {
+        var targetGuild = client.guilds.get(guildId);
+        if(data.emoji.name == '🐱') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'Angel\'s Puss'));
+        else if(data.emoji.name == '🍿') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'Movie Squad'));
+        else if (data.emoji.name == '🥇') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'League'));
+    }
+});
+
 client.on('ready', () => {
     console.log('Ready!');
     client.user.setStatus('online');
@@ -67,7 +89,7 @@ client.on('guildMemberAdd', member => {
             .setAuthor(`${member.user.tag}`, `${member.user.displayAvatarURL}`)
             .setColor('0000ff')
             .setTimestamp()
-    client.guilds.get(guildId).channels.find('name', 'borgar-log').send(joinEmbed);
+    client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(joinEmbed);
 });
 
 client.on('guildMemberRemove', member => {
@@ -77,7 +99,7 @@ client.on('guildMemberRemove', member => {
             .setAuthor(`${member.user.tag}`, `${member.user.displayAvatarURL}`)
             .setColor('ff8000')
             .setTimestamp()
-    client.guilds.get(guildId).channels.find('name', 'borgar-log').send(leaveEmbed);
+    client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(leaveEmbed);
 });
 
 client.on('guildBanAdd', (guild, user) => {
@@ -87,7 +109,7 @@ client.on('guildBanAdd', (guild, user) => {
             .setAuthor(`${user.tag}`, `${user.displayAvatarURL}`)
             .setColor('ffc0cb')
             .setTimestamp()
-    guild.channels.find('name', 'borgar-log').send(banEmbed);
+    guild.channels.find(c => c.name == 'borgar-log').send(banEmbed);
 });
 
 client.on('guildBanRemove', (guild, user) => {
@@ -97,7 +119,7 @@ client.on('guildBanRemove', (guild, user) => {
             .setAuthor(`${user.tag}`, `${user.displayAvatarURL}`)
             .setColor('ff0000')
             .setTimestamp()
-    guild.channels.find('name', 'borgar-log').send(unbanEmbed);
+    guild.channels.find(c => c.name == 'borgar-log').send(unbanEmbed);
 });
 
 client.on('messageDelete', message => {
@@ -111,10 +133,11 @@ client.on('messageDelete', message => {
             .setTimestamp()
             .setFooter(`Originally sent: ${to12Hr(message.createdAt)}`)
             .setDescription(content)
-    client.guilds.get(guildId).channels.find('name', 'borgar-log').send(deletedEmbed);
+    client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(deletedEmbed);
 });
 
 client.on('messageUpdate', (oldMsg, newMsg) => {
+    if(newMsg.embeds.length) return;
     if(oldMsg.channel.name == 'borgar-log' || oldMsg.guild.id != guildId) return;
     if(oldMsg.attachments.size) var oldContent = oldMsg.attachments.map(a => a.proxyURL);
     else var oldContent = oldMsg.content;
@@ -128,7 +151,7 @@ client.on('messageUpdate', (oldMsg, newMsg) => {
             .setFooter(`Originally sent: ${to12Hr(oldMsg.createdAt)}`)
             .setDescription(oldContent)
             .addField('to', newContent)
-    client.guilds.get(guildId).channels.find('name', 'borgar-log').send(editedEmbed);
+    client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(editedEmbed);
 });
 
 client.on('userUpdate', (oldUser, newUser) => {
@@ -139,7 +162,7 @@ client.on('userUpdate', (oldUser, newUser) => {
             .setColor('6480ff')
             .setTimestamp()
             .setThumbnail(`${newUser.displayAvatarURL}`);
-        return client.guilds.get(guildId).channels.find('name', 'borgar-log').send(avatarEmbed);
+        return client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(avatarEmbed);
     }
     else if(oldUser.username != newUser.username) {
         const usernameEmbed = new Discord.RichEmbed()
@@ -148,14 +171,14 @@ client.on('userUpdate', (oldUser, newUser) => {
             .setColor('8000ff')
             .setTimestamp()
             .setDescription(newUser.username)
-        return client.guilds.get(guildId).channels.find('name', 'borgar-log').send(usernameEmbed);
+        return client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(usernameEmbed);
     }
 });
 
 client.on('message', message => {
 
     if(message.content.toLowerCase().includes('burg') || message.content.toLowerCase().includes('borg')) {
-        const burgEmoji = message.guild.emojis.find('name', 'burg');
+        const burgEmoji = message.guild.emojis.find(e => e.name == 'burg');
         if(burgEmoji) message.react(burgEmoji);
     }
   
@@ -169,7 +192,16 @@ client.on('message', message => {
     if(!command) return;
 
     try {
-        command.execute(message, args, client, Stats);
+        if(commandName == 'poll' ) {
+            const pollFile = `./polls/poll${message.author.id}.json`;
+            if(!fs.existsSync(pollFile)) {
+                var createFile = fs.createWriteStream(pollFile, {flags: 'w'});
+                createFile.write(JSON.stringify({poll: []}));
+                setTimeout(function() {command.execute(message, args, client, Users)}, 2000);
+            }
+            else command.execute(message, args, client, Users);
+        }
+        else command.execute(message, args, client, Users);
     }
     catch(error) {
         console.error(error);

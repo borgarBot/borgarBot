@@ -8,7 +8,7 @@ const clean = text => {
 
 module.exports = {
     name: 'eval',
-    execute(message, args, client, Stats) {
+    execute(message, args, client, Users) {
         if(message.author.id != ownerId && !message.member.permissions.has('ADMINISTRATOR')) return;
         try {
             const code = args.join(' ');
