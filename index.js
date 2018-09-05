@@ -82,6 +82,16 @@ client.on('ready', () => {
     client.user.setActivity('some borgar', {type: 'WATCHING'});
 });
 
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+    const userRow = await Users.findOne({where: {userId: newMember.id}});
+    if(userRow && userRow.roleId && !newMember.roles.has(userRow.roleId)) newMember.addRole(newMember.guild.roles.get(userRow.roleId)).catch(e => console.error(e));
+    var roleRow;
+    newMember.roles.map(async r => {
+        roleRow = await Users.findOne({where: {roleId: r.id}});
+        if(roleRow && roleRow.userId != newMember.id) newMember.removeRole(newMember.guild.roles.get(r.id)).catch(e => console.error(e));
+    });
+});
+
 client.on('guildMemberAdd', member => {
     if(member.guild.id != guildId) return;
     const joinEmbed = new Discord.RichEmbed()
