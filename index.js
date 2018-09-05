@@ -21,7 +21,7 @@ const sequelize = new Sequelize('database', 'user', 'password', {
     storage: 'database.sqlite'
 });
 
-const Stats = sequelize.define('stats', {
+const Users = sequelize.define('users', {
     userId: {
       type: Sequelize.STRING,
       unique: true,
@@ -34,6 +34,10 @@ const Stats = sequelize.define('stats', {
     burgerCount: {
         type: Sequelize.INTEGER,
         defaultValue: 0
+    },
+    roleId: {
+        type: Sequelize.STRING,
+        unique: true
     }
 });
        
@@ -52,6 +56,24 @@ const to12Hr = (time => {
     else if(hours == 12) minutes = minutes.concat(' PM');
     else minutes = minutes.concat(' AM');
     return hours.toString().concat(`:${minutes}`);
+});
+
+client.on('raw', event => {
+    const {d : data} = event;
+    if(!data || !data.message_id) return;
+    if(data.message_id != '486687818983407628') return;
+    if(event.t == 'MESSAGE_REACTION_ADD') {
+        var targetGuild = client.guilds.get(guildId);
+        if(data.emoji.name == '🐱') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'Angel\'s Puss'));
+        else if(data.emoji.name == '🍿') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'Movie Squad'));
+        else if (data.emoji.name == '🥇') targetGuild.members.get(data.user_id).addRole(targetGuild.roles.find(r => r.name == 'League'));
+    }
+    else if(event.t == 'MESSAGE_REACTION_REMOVE') {
+        var targetGuild = client.guilds.get(guildId);
+        if(data.emoji.name == '🐱') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'Angel\'s Puss'));
+        else if(data.emoji.name == '🍿') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'Movie Squad'));
+        else if (data.emoji.name == '🥇') targetGuild.members.get(data.user_id).removeRole(targetGuild.roles.find(r => r.name == 'League'));
+    }
 });
 
 client.on('ready', () => {
@@ -175,11 +197,11 @@ client.on('message', message => {
             if(!fs.existsSync(pollFile)) {
                 var createFile = fs.createWriteStream(pollFile, {flags: 'w'});
                 createFile.write(JSON.stringify({poll: []}));
-                setTimeout(function() {command.execute(message, args, client, Stats)}, 2000);
+                setTimeout(function() {command.execute(message, args, client, Users)}, 2000);
             }
-            else command.execute(message, args, client, Stats);
+            else command.execute(message, args, client, Users);
         }
-        else command.execute(message, args, client, Stats);
+        else command.execute(message, args, client, Users);
     }
     catch(error) {
         console.error(error);

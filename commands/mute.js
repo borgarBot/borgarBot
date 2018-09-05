@@ -4,7 +4,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'mute',
-    execute(message, args, client, Stats) {
+    execute(message, args, client, Users) {
         if(!message.member.permissions.has('MANAGE_ROLES')) return;
         if(message.channel.type == 'text') message.delete();
         const tagCount = message.mentions.users.array().length;

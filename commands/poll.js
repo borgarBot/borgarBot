@@ -8,7 +8,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'poll',
-    async execute(message, args, client, Stats) {
+    async execute(message, args, client, Users) {
         const emojiFromName = (name => {
             let emojiString = client.guilds.get(guildId).emojis.find(e => e.name == name);
             emojiString = emojiString ? emojiString.toString() : `:${name}:`;
@@ -183,7 +183,7 @@ ${namedColors.map(c => c.name).join(', ')}`).then(m => {
                             var isHex = (colorArgs[0].length == 6 || (colorArgs[0].length == 7 && colorArgs[0].startsWith('#'))) && !collected.first().content.includes(',');
                             const colorNames = namedColors.map(c => c.name);
                             var wasNamed = false;
-                            if(colorNames.includes(nameStr)) {
+                            if(colorNames.includes(nameStr.toLowerCase())) {
                                 const namedCode = namedColors[colorNames.indexOf(nameStr)].code.split(' ');
                                 var firstArg = namedCode[0];
                                 var secondArg = namedCode[1];

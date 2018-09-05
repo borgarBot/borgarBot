@@ -4,7 +4,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'reload',
-    async execute(message, args, client, Stats) {
+    async execute(message, args, client, Users) {
         message.delete();
         if(args.length) {
             const commandName = args[0].toLowerCase();
