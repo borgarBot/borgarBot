@@ -17,6 +17,7 @@
         {"name": "dark gray", "code": "50, 50, 50"},
         {"name": "white", "code": "255, 255, 255"},
         {"name": "pink", "code": "255, 0, 150"},
-        {"name": "cyan", "code": "0, 255, 255"}
+        {"name": "cyan", "code": "0, 255, 255"},
+        {"name": "invisible", "code": "54, 57, 62"}
     ]
 }
