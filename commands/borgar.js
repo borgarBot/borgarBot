@@ -7,7 +7,7 @@ var repeatNumber;
 
 module.exports = {
     name: 'borgar',
-    async execute(message, args, client, Users) {
+    async execute(message, args, client, Users, Warnings) {
         const tagCount = message.mentions.users.array().length;
         if(!isNaN(args[0])) repeatNumber = parseInt(args[0]);
         else if(!isNaN(args[1])) repeatNumber = parseInt(args[1]);
@@ -20,5 +20,8 @@ module.exports = {
             if(tagCount) message.mentions.users.first().send({files: [await body[0].file_url]});
             else message.channel.send({files: [await body[0].file_url]});
         }
+    },
+    help(message, client) {
+        return message.channel.send('Sends SFW anime burger pics.\n\`!borgar [amount] [@someone]\`').then(msg => msg.delete(15000));
     }
 }

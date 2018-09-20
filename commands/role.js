@@ -6,7 +6,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'role',
-    async execute(message, args, client, Users) {
+    async execute(message, args, client, Users, Warnings) {
         message.delete();
         var option = args.length ? args.shift().toLowerCase() : '';
 
@@ -105,11 +105,11 @@ ${namedColors.map(c => c.name).join(', ')}, none`).then(m => {
                             if(g < 16) green = '0'.concat(green);
                             if(b < 16) blue = '0'.concat(blue);
                             var totalColor = ''.concat(red).concat(green).concat(blue);
+                            if(collected.first().content.toLowerCase() != 'none' && (isNaN(r) || isNaN(g) || isNaN(b)))
+                                return message.channel.send('Please try again with a valid color').then(msg => msg.delete(15000));
                         }
-                        else var totalColor = args[0].slice(-6);
-            
-                        if(collected.first().content.toLowerCase() != 'none' && (isNaN(r) || isNaN(g) || isNaN(b)))
-                            return message.channel.send('Please try again with a valid color').then(msg => msg.delete(15000));
+                        else var totalColor = colorArgs[0].slice(-6);
+                        
                         getRole().then(r => r.setColor(totalColor));
                         collected.first().delete();
                         message.channel.send('Success!').then(msg => msg.delete(5000))
@@ -123,5 +123,8 @@ ${namedColors.map(c => c.name).join(', ')}, none`).then(m => {
         else {
             return message.channel.send('Please use either `!role color` or `!role name`').then(msg => msg.delete(60000));
         }
+    },
+    help(message, client) {
+        return message.channel.send('Give yourself your own personal role with this command.\n\`!role\`').then(msg => msg.delete(15000));
     }
 }

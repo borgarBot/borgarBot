@@ -1,10 +1,15 @@
 const Discord = require('discord.js');
 const fs = require ('fs');
 const Sequelize = require('sequelize');
-const {prefix, guildId} = require('./config.json');
+const Canvas = require('canvas');
+const snekfetch = require('snekfetch');
+const https = require('https');
+const crypto = require('crypto');
+const {prefix, ownerId, guildId} = require('./config.json');
 const client = new Discord.Client();
 const token = process.env.TOKEN;
 const commandFiles = fs.readdirSync('./commands');
+const invisTypingCooldowns = [];
 client.commands = new Discord.Collection();
 
 process.on('unhandledRejection', error => console.error(`Uncaught Promise Rejection:\n${error}`));
@@ -40,6 +45,14 @@ const Users = sequelize.define('users', {
         unique: true
     }
 });
+
+const Warnings = sequelize.define('warnings', {
+    userId: {
+      type: Sequelize.STRING,
+      primaryKey: true
+    },
+    reason: Sequelize.STRING
+});
        
 const to12Hr = (time => {
     var minutes = time.getMinutes().toString();
@@ -57,6 +70,20 @@ const to12Hr = (time => {
     else minutes = minutes.concat(' AM');
     return hours.toString().concat(`:${minutes}`);
 });
+
+const deleteIfThunder = message => {
+    const hash = crypto.createHash('sha256');
+    const url = message.attachments.first() ? message.attachments.first().url : message.content;
+    https.get(url, (resp) => {
+        resp.setEncoding('base64');
+        var body = "data:" + resp.headers["content-type"] + ";base64,";
+        resp.on('data', (data) => { body += data});
+        resp.on('end', () => {
+            hash.update(body);
+            if(hash.digest('hex') == 'aee1b23e5345a93acd060b2fc34c2a775dee43fbec91534b06276ac8244648d1') message.delete();
+        });
+    });
+}
 
 client.on('raw', event => {
     const {d : data} = event;
@@ -76,10 +103,36 @@ client.on('raw', event => {
     }
 });
 
-client.on('ready', () => {
-    console.log('Ready!');
+client.on('ready', async () => {
+    await sequelize.sync();
     client.user.setStatus('online');
     client.user.setActivity('some borgar', {type: 'WATCHING'});
+    console.log('Ready!');
+});
+
+client.on('typingStart', (channel, user) => {
+    if(user.presence.status != 'offline' || user.bot || user.id == ownerId) return;
+    const now = Date.now();
+    if(!invisTypingCooldowns.includes(user.id)) {
+        invisTypingCooldowns.push(user.id);
+        setTimeout(() => invisTypingCooldowns.splice(invisTypingCooldowns.indexOf(user.id), 1), 15000);
+        channel.send(`<@${user.id}> I SEE YOU TYPING WHILE INVISIBLE :eyes:`).then(msg => msg.delete(15000));
+    }
+});
+
+client.on('roleDelete', async role => {
+    var roleRow = await Users.findOne({where: {roleId: role.id}});
+    if(!roleRow) return;
+    var roleId;
+    await role.guild.createRole({
+        name: role.name,
+        color: role.color,
+        position: role.position,
+        permissions: role.permissions
+    }).then(r => roleId = r.id);
+    var role = await role.guild.roles.find(r => r.id == roleId);
+    role.guild.members.get(roleRow.userId).addRole(role);
+    await roleRow.update({roleId: role.id});
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
@@ -92,14 +145,56 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
     });
 });
 
-client.on('guildMemberAdd', member => {
+client.on('guildMemberAdd', async member => {
     if(member.guild.id != guildId) return;
+  
+    member.addRole(member.guild.roles.find(r => r.name == 'Members'));
+  
     const joinEmbed = new Discord.RichEmbed()
             .setTitle('has joined the server')
             .setAuthor(`${member.user.tag}`, `${member.user.displayAvatarURL}`)
             .setColor('0000ff')
             .setTimestamp()
     client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(joinEmbed);
+    
+    const canvas = Canvas.createCanvas(700, 250);
+    const ctx = canvas.getContext('2d');
+
+    var {body: buffer} = await snekfetch.get('https://cdn.glitch.com/28a3c400-a6a3-42a1-bcca-5c8c7f09ce30%2Fbanner.jpg?1536215122990');
+    const background = await Canvas.loadImage(buffer);
+    ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'black';
+
+    ctx.font = '44px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Welcome', 20, 140);
+
+    var ptSize = 44;
+    var width = ctx.measureText(member.user.tag).width;
+    while(width > 210) {
+        ptSize -= 2;
+        ctx.font = `${ptSize}px sans-serif`;
+        width = ctx.measureText(member.user.tag).width;
+    }
+    ctx.fillText(member.user.tag, 680 - width, 140);
+
+    ctx.beginPath();
+    ctx.arc(350, 125, 100, 0, Math.PI * 2, true);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
+    ctx.closePath();
+    ctx.clip();
+
+    var {body: buffer} = await snekfetch.get(member.user.displayAvatarURL);
+    const avatar = await Canvas.loadImage(buffer);
+    ctx.drawImage(avatar, 250, 25, 200, 200);
+
+    const attachment = new Discord.Attachment(canvas.toBuffer(), 'welcome-image.png');
+
+    member.guild.channels.find(c => c.name == 'general').send(`Welcome to the server, <@${member.id}>! Dont forget to check out ${member.guild.channels.find(c => c.name == 'get-roles')}`, attachment);
 });
 
 client.on('guildMemberRemove', member => {
@@ -110,6 +205,7 @@ client.on('guildMemberRemove', member => {
             .setColor('ff8000')
             .setTimestamp()
     client.guilds.get(guildId).channels.find(c => c.name == 'borgar-log').send(leaveEmbed);
+    member.guild.channels.find(c => c.name == 'general').send(`Goodbye ${member.user.tag}. They were probably a pedophile.`);
 });
 
 client.on('guildBanAdd', (guild, user) => {
@@ -186,6 +282,8 @@ client.on('userUpdate', (oldUser, newUser) => {
 });
 
 client.on('message', message => {
+  
+    if(message.attachments.first() || (message.content.startsWith('https://cdn.discordapp.com/attachments/') && message.content.endsWith('.png'))) deleteIfThunder(message);
 
     if(message.content.toLowerCase().includes('burg') || message.content.toLowerCase().includes('borg')) {
         const burgEmoji = message.guild.emojis.find(e => e.name == 'burg');
@@ -207,11 +305,11 @@ client.on('message', message => {
             if(!fs.existsSync(pollFile)) {
                 var createFile = fs.createWriteStream(pollFile, {flags: 'w'});
                 createFile.write(JSON.stringify({poll: []}));
-                setTimeout(function() {command.execute(message, args, client, Users)}, 2000);
+                setTimeout(function() {command.execute(message, args, client, Users, Warnings)}, 2000);
             }
-            else command.execute(message, args, client, Users);
+            else command.execute(message, args, client, Users, Warnings);
         }
-        else command.execute(message, args, client, Users);
+        else command.execute(message, args, client, Users, Warnings);
     }
     catch(error) {
         console.error(error);

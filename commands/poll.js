@@ -8,7 +8,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'poll',
-    async execute(message, args, client, Users) {
+    async execute(message, args, client, Users, Warnings) {
         const emojiFromName = (name => {
             let emojiString = client.guilds.get(guildId).emojis.find(e => e.name == name);
             emojiString = emojiString ? emojiString.toString() : `:${name}:`;
@@ -223,10 +223,10 @@ ${namedColors.map(c => c.name).join(', ')}`).then(m => {
                                 if(g < 16) green = '0'.concat(green);
                                 if(b < 16) blue = '0'.concat(blue);
                                 var totalColor = ''.concat(red).concat(green).concat(blue);
+                                if(isNaN(r) || isNaN(g) || isNaN(b)) return message.channel.send('Please try again with a valid color').then(msg => msg.delete(15000));
                             }
-                            else var totalColor = args[0].slice(-6);
+                            else var totalColor = colorArgs[0].slice(-6);
                 
-                            if(isNaN(r) || isNaN(g) || isNaN(b)) return message.channel.send('Please try again with a valid color').then(msg => msg.delete(15000));
                             var json = JSON.parse(data);
                             json.poll.push({color: totalColor});
                             var output = fs.createWriteStream(pollFile, {flags: 'w'});
@@ -271,5 +271,8 @@ ${namedColors.map(c => c.name).join(', ')}`).then(m => {
         else {
             return message.channel.send('Please type of of the following after the command:\ncreate, delete, send, close, view, add, emojis, color, footer').then(msg => msg.delete(60000));
         }
+    },
+    help(message, client) {
+        return message.channel.send('Creates and sends a customizable poll. Needs exactly one emoji per field.\n\`!poll\`').then(msg => msg.delete(15000));
     }
 }

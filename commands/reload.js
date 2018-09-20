@@ -4,7 +4,7 @@ process.on('unhandledRejection', error => console.error(`Uncaught Promise Reject
 
 module.exports = {
     name: 'reload',
-    async execute(message, args, client, Users) {
+    async execute(message, args, client, Users, Warnings) {
         message.delete();
         if(args.length) {
             const commandName = args[0].toLowerCase();
@@ -27,5 +27,8 @@ module.exports = {
                 msg.delete(15000);
             });
         }
+    },
+    help(message, client) {
+        return message.channel.send('!!! ADMINS ONLY !!!').then(msg => msg.delete(15000));
     }
 }
